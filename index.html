@@ -1,0 +1,51 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+        <h1> {{ myvar }}  </h1>
+        <ul>
+            {% for user in users %}
+                <li> {{ user['name'] }}  </li>
+            {% end %}
+        </ul>           
+        <ul id="message_box"></ul>
+        <form method="POST" action="/submit">
+            <input id="chat_message" type="text" name="message" />
+            <input id="submit_button" type="submit" value="Submit" />
+        </form>         
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+    $( document ).ready(function() {     
+        var ws = new WebSocket("ws://localhost:8888/websocket");
+
+        ws.onopen = function() {
+            message = {'action': 'connect', 'message': 'new connection'}
+            ws.send(JSON.stringify(message));
+        };
+        
+        ws.onmessage = function (evt) {
+            jdata = JSON.parse(evt.data);    
+            if( jdata['action'] == 'set_sign'){
+                console.log(`Set sign ${jdata['message']}`);
+                localStorage.setItem('chat-connection-id', jdata['message']);
+            } else {      
+                $('#message_box').append('<li>'+jdata.message+'</li>');
+            }
+        }
+
+        $('#submit_button').on('click',function(e){
+            e.preventDefault(); 
+            data = {
+                'action': 'message',
+                'message': $('#chat_message').val()
+            }; 
+            ws.send(JSON.stringify(data));     
+        });
+
+    });
+</script> 
+
+
+    </body> 
+</html>
