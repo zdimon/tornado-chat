@@ -34,14 +34,22 @@
             }
         }
 
+        
         $('#submit_button').on('click',function(e){
             e.preventDefault(); 
             data = {
                 'action': 'message',
                 'message': $('#chat_message').val()
             }; 
-            ws.send(JSON.stringify(data));     
+            //ws.send(JSON.stringify(data));     
+
+            $.post('/submit',data,function(r){
+                console.log(r);
+            })
+
+
         });
+        
 
     });
 </script> 

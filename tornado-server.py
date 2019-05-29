@@ -8,7 +8,9 @@ import json
 import datetime
 import time
 import hashlib
-
+import tornadoredis
+import redis
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 users = [
     {
@@ -30,11 +32,26 @@ class MainHandler(tornado.web.RequestHandler):
 class FormHandler(tornado.web.RequestHandler):
     def post(self):
         print(self.get_argument('message'))
-        self.render("index.html",  myvar='Hello worlddd', users=users)
+        data = {"action": "onmessage", "message": self.get_argument('message')}
+        redis_client.publish('chat-channel',json.dumps(data))
+        self.write("OK")
 
 ws_clients = {} 
 
 class WebsocketHandler(tornado.websocket.WebSocketHandler):
+
+    def __init__(self, *args, **kwargs):
+        super(WebsocketHandler, self).__init__(*args, **kwargs)
+        self.listen_redis()
+
+    @tornado.gen.coroutine
+    def listen_redis(self):
+        self.client = tornadoredis.Client()
+        self.client.connect()
+        #self.client.subscribe('chat-channel')
+        yield tornado.gen.Task(self.client.subscribe, 'chat-channel')
+        self.client.listen(self.on_message)
+
 
     def open(self):
         print('Open connection')
@@ -58,9 +75,19 @@ class WebsocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message):
         print('got message')
-        json_message = json.loads(message)
+        try:
+            message = message.body
+        except:
+            pass
+
+        try:
+            message = json.loads(message)['message']
+        except:
+            pass
+        print(message)
         for c in ws_clients:
-            ws_clients[c].write_message({'action': 'onmessage', 'message': json_message['message']})
+            ws_clients[c].write_message({'action': 'onmessage', 'message': message})
+    
         
 
     def on_close(self):
